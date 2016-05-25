@@ -1,0 +1,377 @@
+﻿<UserControl x:Class="RegEditor.RegTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:RegEditor"
+             xmlns:reg="clr-namespace:RegistryClass"
+             mc:Ignorable="d"
+             Unloaded="UserControl_Unloaded"
+             d:DesignHeight="300" d:DesignWidth="300" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="Auto" Height="Auto" AllowDrop="False" GotFocus="UserControl_GotFocus">
+    <UserControl.Resources>
+<!--Converter-->
+        <local:WidthConverter x:Key="WidthConverter" />
+        <local:BinaryConverter x:Key="BinaryConverter" />
+        <!--<local:ByteArrayToStringConverter x:Key="ByteArrayToStringConverter" />-->
+        <!--<local:HexStringToStringConverter x:Key="HexStringToStringConverter" />-->
+        <local:RegObjectToStringConverter x:Key="RegObjectToStringConverter" />
+        <!--<local:RegObjectToByteArrayConverter x:Key="RegObjectToByteArrayConverter" />-->
+<!--Converter end-->        
+<!--TreeViewItem style template-->
+        <Style TargetType="TreeViewItem">
+                <Setter Property="ContextMenu" Value="{DynamicResource treeViewContextMenu}" />
+                <Setter Property="BorderThickness" Value="1"/>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="BorderBrush" Value="#adc6e5"/>
+                    </Trigger>
+                    <MultiTrigger>
+                        <MultiTrigger.Conditions>
+                            <Condition Property="IsSelected" Value="True"/>
+                            <Condition Property="IsSelectionActive" Value="False"/>
+                        </MultiTrigger.Conditions>
+                        <Setter Property="BorderBrush" Value="LightGray"/>
+                    </MultiTrigger>
+                </Style.Triggers>
+                <Style.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="2"/>
+                    </Style>
+                </Style.Resources>
+            </Style>
+<!--TreeViewItem style template end-->        
+<!--Create Key template-->
+        <!--<ControlTemplate x:Key="{ComponentResourceKey TypeInTargetAssembly={x:Type MenuItem}, ResourceId=SubmenuItemTemplateKey}" TargetType="{x:Type MenuItem}">-->
+        <ControlTemplate x:Key="MenuItemCreateKeyTemplate" TargetType="{x:Type MenuItem}">
+            <StackPanel Orientation="Horizontal" Background="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                <TextBox Height="20" Width="200" KeyDown="TextBox_CreateKey_KeyDown" />
+                <Button Name="btn_CreateKey" Margin="5,0,0,0" Width="24" Height="20" Click="btn_CreateKey_Click">
+                    <TextBlock Text="OK" Margin="0,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
+            </StackPanel>        
+        </ControlTemplate>
+        <ControlTemplate x:Key="MenuItemCreateValueTemplate" TargetType="{x:Type MenuItem}">
+            <StackPanel Orientation="Horizontal" Background="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                <TextBox Height="20" Width="200" KeyDown="TextBox_CreateValue_KeyDown" />
+                <Button Name="btn_CreateKey" Margin="5,0,0,0" Width="24" Height="20" Click="btn_CreateValue_Click">
+                    <TextBlock Text="OK" Margin="0,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
+            </StackPanel>
+        </ControlTemplate>
+<!--Create Key / Creak Value template end-->        
+<!--Submen templates--> 
+        <ControlTemplate x:Key="MenuItemEditBinaryTemplate" TargetType="{x:Type MenuItem}" >
+            <Grid Name="Grid_SubMenu" Margin="-2" >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="0" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Height="Auto" Orientation="Vertical" Background="White">
+                    <Slider Name="bn_Slider" Minimum="100" Maximum="450" Value="{Binding SliderValueProperty}" Width="200" HorizontalAlignment="Left" Initialized="Slider_Initialized" IsVisibleChanged="rtb_Slider_IsVisibleChanged" Margin="5,5,0,0" Background="White" />
+                    <StackPanel Orientation="Horizontal" Background="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0">
+                        <local:HexaGrid x:Name="hexaDataGrid"  Width="Auto" Height="{Binding ElementName=bn_Slider, Path=Value, Converter={StaticResource WidthConverter}, ConverterParameter=1.5}" Loaded="HexaGrid_Loaded"></local:HexaGrid>
+                        <Button Content="Save" VerticalAlignment="Top" HorizontalAlignment="Right" Width="42" Height="20" Margin="10,5,5,0" Click="Button_Binary_Edit_OK_Click" >
+                            <Button.Background>
+                                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                    <GradientStop Color="#FF6EBDE2" Offset="1" />
+                                    <GradientStop Color="White" Offset="0" />
+                                </LinearGradientBrush>
+                            </Button.Background>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="MenuItemEditMultiTemplate" TargetType="{x:Type MenuItem}" >
+            <Grid Name="Grid_SubMenu">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="0" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Vertical" Background="White">
+                    <Slider Name="multi_Slider" Minimum="100" Maximum="450" Value="{Binding SliderValueProperty}" Width="200" HorizontalAlignment="Left" Initialized="Slider_Initialized" IsVisibleChanged="rtb_Slider_IsVisibleChanged" Margin="10,5,0,0" Background="White" />
+                    <StackPanel Orientation="Horizontal" Background="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0">
+                        <RichTextBox Name="rtb_binary" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="10,10,10,10" Width="{Binding ElementName=multi_Slider, Path=Value, Converter={StaticResource WidthConverter}, ConverterParameter=1.5}" Height="{Binding ElementName=multi_Slider, Path=Value}" Loaded="rtb_multi_Loaded" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" VerticalScrollBarVisibility="Auto" >
+                        </RichTextBox>
+                        <StackPanel Orientation="Vertical" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                            <Button Content="Save" HorizontalAlignment="Right" Width="42" Height="20" Margin="0,10,5,0" Click="Button_Multi_Edit_OK_Click" >
+                                <Button.Background>
+                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                        <GradientStop Color="#FF6EBDE2" Offset="1" />
+                                        <GradientStop Color="White" Offset="0" />
+                                    </LinearGradientBrush>
+                                </Button.Background>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="MenuItemEditStirngTemplate" TargetType="{x:Type MenuItem}" >
+            <Grid Name="Grid_SubMenu">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="0" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Vertical" Background="White">
+                    <Slider Name="str_Slider" Minimum="100" Maximum="450" Value="{Binding SliderValueProperty}" Width="200" HorizontalAlignment="Left" Initialized="Slider_Initialized" IsVisibleChanged="rtb_Slider_IsVisibleChanged" Margin="10,5,0,0" Background="White" />
+                    <StackPanel Orientation="Horizontal" Background="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0">
+                        <TextBox Name="tbx_string" Text="{Binding Path=Value, Converter={StaticResource RegObjectToStringConverter}}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="10,10,10,10" Width="{Binding ElementName=str_Slider, Path=Value, Converter={StaticResource WidthConverter}, ConverterParameter=1.5}" Height="22" VerticalScrollBarVisibility="Auto" >
+                        </TextBox>
+                        <StackPanel Orientation="Vertical" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                            <Button Content="Save" HorizontalAlignment="Right" Width="42" Height="20" Margin="0,10,5,0" Click="Button_String_Edit_OK_Click" >
+                                <Button.Background>
+                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                        <GradientStop Color="#FF6EBDE2" Offset="1" />
+                                        <GradientStop Color="White" Offset="0" />
+                                    </LinearGradientBrush>
+                                </Button.Background>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="MenuItemEditDWORDQWORDTemplate" TargetType="{x:Type MenuItem}" >
+            <Grid Name="Grid_SubMenu">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="0" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Vertical" Background="White">
+                    <Slider Name="dw_Slider" Minimum="100" Maximum="450" Value="{Binding SliderValueProperty}" Width="200" HorizontalAlignment="Left" Initialized="Slider_Initialized" IsVisibleChanged="rtb_Slider_IsVisibleChanged" Margin="10,5,0,0" Background="White" />
+                    <StackPanel Orientation="Horizontal" Background="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <TextBox Name="tbx1_string" Text="{Binding Path=Value, Converter={StaticResource RegObjectToStringConverter}}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="10,10,10,10" Width="{Binding ElementName=dw_Slider, Path=Value, Converter={StaticResource WidthConverter}, ConverterParameter=1.5}" Height="22" VerticalScrollBarVisibility="Auto" />
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton Name="rbtn_decimal" Content="Decimal" Margin="10,0,5,5" Click="RadioButton_Decimal_Click" GroupName="value" IsChecked="True" />
+                                <RadioButton Name="rtb_hexadecimal" Content="Hexadecimal" Click="RadioButton_Hexadecimal_Click" GroupName="value" />
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Orientation="Vertical" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                            <Button Content="Save" HorizontalAlignment="Right" Width="42" Height="20" Margin="0,10,5,0" Click="Button_DW_Edit_OK_Click" >
+                                <Button.Background>
+                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                        <GradientStop Color="#FF6EBDE2" Offset="1" />
+                                        <GradientStop Color="White" Offset="0" />
+                                    </LinearGradientBrush>
+                                </Button.Background>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="MenuItemEditExpandStirngTemplate" TargetType="{x:Type MenuItem}" >
+            <Grid Name="Grid_SubMenu">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="0" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Vertical" Background="White">
+                    <Slider Name="ex_Slider" Minimum="100" Maximum="450" Value="{Binding SliderValueProperty}" Width="200" HorizontalAlignment="Left" Initialized="Slider_Initialized" IsVisibleChanged="rtb_Slider_IsVisibleChanged" Margin="10,5,0,0" Background="White" />
+                    <StackPanel Orientation="Horizontal" Background="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="0,0,0,0">
+                        <TextBox Name="tbx_string" Text="{Binding Path=Value, Converter={StaticResource RegObjectToStringConverter}}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="10,10,10,10" Width="{Binding ElementName=ex_Slider, Path=Value, Converter={StaticResource WidthConverter}, ConverterParameter=1.5}" Height="22" VerticalScrollBarVisibility="Auto" >
+                        </TextBox>
+                        <StackPanel Orientation="Vertical" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                            <Button Content="Save" HorizontalAlignment="Right" Width="42" Height="20" Margin="0,10,5,0" Click="Button_Expand_Edit_OK_Click" >
+                                <Button.Background>
+                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                        <GradientStop Color="#FF6EBDE2" Offset="1" />
+                                        <GradientStop Color="White" Offset="0" />
+                                    </LinearGradientBrush>
+                                </Button.Background>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </ControlTemplate>
+<!--Submen templates end-->
+    </UserControl.Resources>
+    <Grid Name="grid_Content" Background="#FFE5E5E5" HorizontalAlignment="Stretch" Height="Auto" VerticalAlignment="Stretch" Width="Auto" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="2" />
+            <ColumnDefinition Width="3*" />
+        </Grid.ColumnDefinitions>
+        <TreeView Grid.Column="0" Name="treeview_1" TreeViewItem.Selected="treeview_1_Selected" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Height="Auto" Width="Auto" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" MouseRightButtonUp="treeview_1_MouseRightButtonUp" >
+            <TreeView.Resources>
+                <ContextMenu x:Key="treeViewContextMenu" Background="White" BorderBrush="LightGray" >
+                    <MenuItem Header="Add to favorites" InputGestureText="Ctrl+A" Click="MenuItem_Add_Click">
+                        <MenuItem.Icon>
+                            <Image Source="Images/star.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem Header="Create new key">
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_white_key.png" />
+                        </MenuItem.Icon>
+                        <MenuItem Template="{StaticResource MenuItemCreateKeyTemplate}"/>
+                    </MenuItem>
+                    <MenuItem Header="Copy" InputGestureText="Ctrl+C" Click="MenuItem_Copy_Click">
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_copy.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Cut" InputGestureText="Ctrl+X" Click="MenuItem_Cut_Click" >
+                        <MenuItem.Icon>
+                            <Image Source="Images/cut.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Paste" InputGestureText="Ctrl+V" Click="MenuItem_Paste_Click" >
+                        <MenuItem.Icon>
+                            <Image Source="Images/paste_plain.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Delete" InputGestureText="Del" Click="Treeview_MenuItem_Delete_Click">
+                        <MenuItem.Icon>
+                            <Image Source="Images/cross.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </ContextMenu>
+            <!--http://www.codeproject.com/Articles/17025/Custom-TreeView-Layout-in-WPF-->
+            <!--http://xinyustudio.wordpress.com/2012/09/27/wpf-treeview-data-binding-of-heterogeneous-types-of-data-datatemplate-and-hierarchicaldatatemplate/-->
+            <!--http://stackoverflow.com/questions/5047576/wpf-treeview-how-to-style-selected-items-with-rounded-corners-like-in-explorer-->
+
+                <LinearGradientBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" EndPoint="0,1" StartPoint="0,0">
+                    <GradientStop Color="#f0faff" Offset="0"/> <!--Color="#FFD9F4FF"-->
+                    <GradientStop Color="#e7f7ff" Offset="1"/> <!--Color="#FF9BDDFB"-->
+                </LinearGradientBrush>
+                <LinearGradientBrush x:Key="{x:Static SystemColors.ControlBrushKey}" EndPoint="0,1" StartPoint="0,0">
+                    <GradientStop Color="#FFEEEDED" Offset="0"/>
+                    <GradientStop Color="#FFDDDDDD" Offset="1"/>
+                </LinearGradientBrush>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black" />
+                <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="Black" />
+            </TreeView.Resources>
+        </TreeView>
+        <GridSplitter Grid.Column="1" Name="grid_Content_Splitter" HorizontalAlignment="Center" Height="Auto" VerticalAlignment="Stretch" Width="2"/>
+        <DataGrid AutoGenerateColumns="False" Grid.Column="2" Name="dataGrid_1" ItemsSource="{Binding RegDataItem}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SelectionMode="Single" SelectionUnit="Cell" Background="White" GridLinesVisibility="None" CanUserReorderColumns="False" HeadersVisibility="Column" > <!--MouseRightButtonUp="dataGrid_1_MouseRightButtonUp"-->
+            <DataGrid.ContextMenu>
+                <ContextMenu Background="White" BorderBrush="LightGray">
+                    <MenuItem Header="Create new string" >
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_sz.png" />
+                        </MenuItem.Icon>
+                        <MenuItem Template="{StaticResource MenuItemCreateValueTemplate}" />
+                    </MenuItem>
+                    <MenuItem Header="Create new binary" >
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_bn.png" />
+                        </MenuItem.Icon>
+                        <MenuItem Template="{StaticResource MenuItemCreateValueTemplate}" />
+                    </MenuItem>
+                    <MenuItem Header="Create new DWORD" >
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_dw.png" />
+                        </MenuItem.Icon>
+                        <MenuItem Template="{StaticResource MenuItemCreateValueTemplate}" />
+                    </MenuItem>
+                    <MenuItem Header="Create new QWORD">
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_qw.png" />
+                        </MenuItem.Icon>
+                        <MenuItem Template="{StaticResource MenuItemCreateValueTemplate}" />
+                    </MenuItem>
+                    <MenuItem Header="Create new multi string">
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_mu.png" />
+                        </MenuItem.Icon>
+                        <MenuItem Template="{StaticResource MenuItemCreateValueTemplate}" />
+                    </MenuItem>
+                    <MenuItem Header="Create new expand string">
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_ex.png" />
+                        </MenuItem.Icon>
+                        <MenuItem Template="{StaticResource MenuItemCreateValueTemplate}" />
+                    </MenuItem>
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+            <!--http://www.codeproject.com/Articles/30905/WPF-DataGrid-Practical-Examples-->
+            <!--http://wpftutorial.net/DataGrid.html-->
+            <!--http://wpftutorial.net/DataTemplates.html-->
+            <DataGrid.Resources>
+                <ContextMenu x:Key="dataGridCreateEdit" Background="White" BorderBrush="LightGray" >
+                    <MenuItem IsHitTestVisible="False" Focusable="False">
+                        <MenuItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Name}"></TextBlock>
+                                <TextBlock Text=" ("></TextBlock>
+                                <TextBlock Text="{Binding Type}"></TextBlock>
+                                <TextBlock Text=")"></TextBlock>
+                            </StackPanel>
+                        </MenuItem.Header>
+                        <MenuItem.Icon>
+                            <Image Source="{Binding Image}" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator Height="12" />
+                    <MenuItem InputGestureText="Ctrl+E" Header="Edit" SubmenuOpened="MenuItem_SubmenuOpened" SubmenuClosed="MenuItem_SubmenuClosed">
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_white_edit.png" />
+                        </MenuItem.Icon>
+                        <MenuItem Margin="-2,-2,-2,-2" /> <!--Template="{StaticResource MenuItemEditBinaryTemplate}"-->
+                    </MenuItem>
+                    <MenuItem InputGestureText="Ctrl+C" Header="Copy">
+                        <MenuItem.Icon>
+                            <Image Source="Images/page_copy.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem InputGestureText="Ctrl+X" Header="Cut">
+                        <MenuItem.Icon>
+                            <Image Source="Images/cut.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem InputGestureText="Ctrl+V" Header="Paste">
+                        <MenuItem.Icon>
+                            <Image Source="Images/paste_plain.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem InputGestureText="Del" Header="Delete">
+                        <MenuItem.Icon>
+                            <Image Source="Images/cross.png" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </ContextMenu>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Name" Width="200" SortMemberPath="Name" >
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding Image}" VerticalAlignment="Top" />
+                                <TextBlock Text="{Binding Name}" />
+                            </StackPanel>                           
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Type" Width="150" IsReadOnly="True" SortMemberPath="Type">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Type}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Value" Width="*" IsReadOnly="True" SortMemberPath="DisplayValue">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayValue}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+            <DataGrid.RowStyle>
+                <Style TargetType="{x:Type DataGridRow}">
+                    <!--<EventSetter Event="MouseDoubleClick" Handler="dataGrid_MouseDoubleClick" />-->
+                    <Setter Property="ContextMenu" Value="{StaticResource dataGridCreateEdit}" />
+                </Style>
+            </DataGrid.RowStyle>
+        </DataGrid>
+    </Grid>
+</UserControl>
